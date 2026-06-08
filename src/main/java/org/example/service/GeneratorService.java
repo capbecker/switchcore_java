@@ -1,5 +1,6 @@
 package org.example.service;
 
+import lombok.RequiredArgsConstructor;
 import org.example.dto.GenColumnDTO;
 import org.example.dto.GenTableDTO;
 import org.example.model.GenColumn;
@@ -12,30 +13,22 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class GeneratorService {
 
     private final GenTableRepository genTableRepository;
-
     private final GenColumnRepository genColumnRepository;
-
     private final JdbcTemplate jdbcTemplate;
 
-
-    public GeneratorService(GenTableRepository genTableRepository, GenColumnRepository genColumnRepository, JdbcTemplate jdbcTemplate) {
-        this.genTableRepository = genTableRepository;
-        this.genColumnRepository = genColumnRepository;
-        this.jdbcTemplate = jdbcTemplate;
-    }
-
     private GenTable converter(GenTableDTO dto) {
-        return new GenTable(null, dto.getTableName(), null);
+        return new GenTable(null, dto.tableName(), null);
     }
 
     private List<GenColumn> converter(List<GenColumnDTO> listDto, GenTable genTable) {
         return listDto
             .stream()
             .map(
-                dto-> new GenColumn(null, dto.getColumnName(), dto.getUnique(), dto.getColumnType(), dto.getNullable(), false, genTable)
+                dto-> new GenColumn(null, dto.columnName(), dto.isUnique(), dto.columnType(), dto.isNullable(), false, genTable)
             ).toList();
     }
 
@@ -43,17 +36,17 @@ public class GeneratorService {
         StringBuilder sql = new StringBuilder();
         sql
                 .append("CREATE TABLE ")
-                .append(genTableDTO.getTableName())
+                .append(genTableDTO.tableName())
                 .append(" (id number generated always as identity primary key ");
 
-        genTableDTO.getGenColumns()
+        genTableDTO.genColumns()
                 .forEach(c-> {
                     sql.append(", ")
-                            .append(c.getColumnName()).append(" ")
-                            .append(c.getColumnType());
-                    if (!c.getNullable())
+                            .append(c.columnName()).append(" ")
+                            .append(c.columnType());
+                    if (!c.isNullable())
                         sql.append(" NOT NULL ");
-                    if(c.getUnique())
+                    if(c.isUnique())
                         sql.append(" UNIQUE ");
                 });
 
@@ -63,7 +56,7 @@ public class GeneratorService {
     public boolean generateTable(GenTableDTO genTableDTO) {
         try {
             GenTable genTable = genTableRepository.save(converter(genTableDTO));
-            List<GenColumn> listGenColumn = genColumnRepository.saveAll(converter(genTableDTO.getGenColumns(), genTable));
+            List<GenColumn> listGenColumn = genColumnRepository.saveAll(converter(genTableDTO.genColumns(), genTable));
             generateInDatabase(genTableDTO);
         } catch (Exception e) {
             return false;

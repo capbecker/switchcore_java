@@ -35,9 +35,9 @@ public class SwitchcoreService {
                     "java/switchcore_java",
                     "mvn clean package -DskipTests",
                     "target/switchCore_java-1.0-SNAPSHOT.jar"));
-            return new SwitchcoreDto(saved);
+            return SwitchcoreDto.fromEntity(saved);
         }
-        return new SwitchcoreDto(current.get());
+        return SwitchcoreDto.fromEntity(current.get());
     }
 
     public void executeOtherCore(String service) throws IOException {
