@@ -21,6 +21,6 @@ public class GeneratorController {
 
    @PostMapping()
    public ResponseEntity<?> generate(@RequestBody @Validated GenTableDTO genTableDTO) {
-       return ResponseEntity.ok(service.generateTable(genTableDTO));
+       return ResponseEntity.ok(service.generate(genTableDTO, false));
    }
 }

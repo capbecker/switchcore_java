@@ -1,51 +1,32 @@
 package org.example.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Entity
-@Table(name="GenTable")
+@Table(name="gen_Table")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class GenTable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column
     private String tableName;
+    private Boolean byAi;
+    private LocalDate dataCriacao;
+    private String frameworkCriacao;
+
 
     @OneToMany(mappedBy = "genTable")
     private List<GenColumn> genColumns;
-
-    public GenTable() {
-    }
-
-    public GenTable(Long id, String tableName, List<GenColumn> genColumns) {
-        this.id = id;
-        this.tableName = tableName;
-        this.genColumns = genColumns;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getTableName() {
-        return tableName;
-    }
-
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
-    }
-
-    public List<GenColumn> getGenColumns() {
-        return genColumns;
-    }
-
-    public void setGenColumns(List<GenColumn> genColumns) {
-        this.genColumns = genColumns;
-    }
 }

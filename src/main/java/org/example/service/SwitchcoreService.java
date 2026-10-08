@@ -24,7 +24,7 @@ public class SwitchcoreService {
         Optional<Switchcore> current = repository.findByService("switchCore_java");
         if (current.isEmpty()) {
             Switchcore saved = repository.save(new Switchcore(null,
-                    "java",
+                    "teste",
                     System.getProperty("java.version"),
                     "spring-boot",
                     SpringBootVersion.getVersion(),
@@ -43,8 +43,6 @@ public class SwitchcoreService {
     public void executeOtherCore(String service) throws IOException {
         Optional<Switchcore> core = repository.findByService(service);
         if (core.isPresent()) {
-
-
             String[] currentDir = System.getProperty("user.dir").split("\\\\");
             String dir = String.join("/", Arrays.copyOf(currentDir, currentDir.length-2))+"/";
 

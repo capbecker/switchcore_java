@@ -1,66 +1,42 @@
 package org.example.service;
 
 import lombok.RequiredArgsConstructor;
-import org.example.dto.GenColumnDTO;
 import org.example.dto.GenTableDTO;
-import org.example.model.GenColumn;
-import org.example.model.GenTable;
-import org.example.repository.GenColumnRepository;
-import org.example.repository.GenTableRepository;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.io.IOException;
 
 @Service
 @RequiredArgsConstructor
 public class GeneratorService {
 
-    private final GenTableRepository genTableRepository;
-    private final GenColumnRepository genColumnRepository;
-    private final JdbcTemplate jdbcTemplate;
+    //private final TableEventProducer tableEventProducer;
 
-    private GenTable converter(GenTableDTO dto) {
-        return new GenTable(null, dto.tableName(), null);
-    }
+    private final GeneratorSqlService genSqlService;
+    private final GeneratorClassService genClassService;
 
-    private List<GenColumn> converter(List<GenColumnDTO> listDto, GenTable genTable) {
-        return listDto
-            .stream()
-            .map(
-                dto-> new GenColumn(null, dto.columnName(), dto.isUnique(), dto.columnType(), dto.isNullable(), false, genTable)
-            ).toList();
-    }
+    public void compile() throws IOException, InterruptedException {
+        Process process = new ProcessBuilder("cmd", "/c", "mvn -q compile")
+                .inheritIO()
+                .start();
 
-    private void generateInDatabase(GenTableDTO genTableDTO) {
-        StringBuilder sql = new StringBuilder();
-        sql
-                .append("CREATE TABLE ")
-                .append(genTableDTO.tableName())
-                .append(" (id number generated always as identity primary key ");
+        int exitCode = process.waitFor();
 
-        genTableDTO.genColumns()
-                .forEach(c-> {
-                    sql.append(", ")
-                            .append(c.columnName()).append(" ")
-                            .append(c.columnType());
-                    if (!c.isNullable())
-                        sql.append(" NOT NULL ");
-                    if(c.isUnique())
-                        sql.append(" UNIQUE ");
-                });
-
-        jdbcTemplate.execute(sql.toString());
-    }
-
-    public boolean generateTable(GenTableDTO genTableDTO) {
-        try {
-            GenTable genTable = genTableRepository.save(converter(genTableDTO));
-            List<GenColumn> listGenColumn = genColumnRepository.saveAll(converter(genTableDTO.genColumns(), genTable));
-            generateInDatabase(genTableDTO);
-        } catch (Exception e) {
-            return false;
+        if (exitCode != 0) {
+            throw new RuntimeException("Falha ao compilar. Exit code: " + exitCode);
         }
-        return true;
+    }
+
+    public String generate(GenTableDTO genTableDTO, Boolean byAi) {
+        try {
+            genClassService.generateController(genTableDTO, byAi);
+            genSqlService.generateTable(genTableDTO, byAi);
+            genClassService.generateEntity(genTableDTO, byAi);
+            //tableEventProducer.tableCreated(genTableDTO.tableName());
+            compile();
+            return "ok";
+        } catch (Exception e) {
+            return e.getMessage();
+        }
     }
 }
