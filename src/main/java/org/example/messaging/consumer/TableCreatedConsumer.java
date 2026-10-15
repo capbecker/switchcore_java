@@ -1,4 +1,4 @@
-package org.example.configuration;
+package org.example.messaging.consumer;
 
 import org.example.service.EmailService;
 import org.springframework.stereotype.Component;
