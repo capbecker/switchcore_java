@@ -80,6 +80,7 @@ public class GeneratorClassService {
                     Files.deleteIfExists(arquivo);
                 } else {
                     //Escreve o arquivo antigo sobre o novo
+                    Files.createDirectories(arquivo.getParent());
                     Files.writeString(arquivo,entry.getValue());
                 }
             } catch (IOException e) {
@@ -157,7 +158,7 @@ public class GeneratorClassService {
             .add("  }")
             .add("")
             .add("}");
-        System.out.println(textoArquivo);
+        Files.createDirectories(arquivo.getParent());
         Files.writeString(arquivo,textoArquivo.toString());
     }
 
@@ -216,7 +217,7 @@ public class GeneratorClassService {
             .add("        repository.delete(entidade);")
             .add("    }")
             .add("}");
-        System.out.println(textoArquivo);
+        Files.createDirectories(arquivo.getParent());
         Files.writeString(arquivo,textoArquivo.toString());
     }
 
@@ -256,6 +257,7 @@ public class GeneratorClassService {
             textoArquivo.add("private %s %s;".formatted(c.getColumnType().getJavaType(),c.getColumnName()));
         }
         textoArquivo.add("}");
+        Files.createDirectories(arquivo.getParent());
         Files.writeString(arquivo, textoArquivo.toString());
     }
 
@@ -273,7 +275,7 @@ public class GeneratorClassService {
             .add("public interface %sRepository extends JpaRepository<%s, Long> {"
                     .formatted(nomeTabela, nomeTabela)
             ).add("}");
-        System.out.println(textoArquivo);
+        Files.createDirectories(arquivo.getParent());
         Files.writeString(arquivo, textoArquivo.toString());
     }
 
