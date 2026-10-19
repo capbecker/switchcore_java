@@ -16,10 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +36,13 @@ public class GeneratorService {
      * @throws InterruptedException
      */
     private void compile() throws IOException, InterruptedException {
-        Process process = new ProcessBuilder("cmd", "/c", "mvn clean -q compile")
+        boolean windows = System.getProperty("os.name").toLowerCase().contains("win");
+
+        List<String> comando = windows
+                ? List.of("cmd", "/c", "mvn clean -q compile")
+                : List.of("mvn", "clean", "-q", "compile");
+
+        Process process = new ProcessBuilder(comando)
                 .inheritIO()
                 .start();
 
