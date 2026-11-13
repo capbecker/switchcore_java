@@ -6,7 +6,7 @@ import org.example.dto.GenColumnDTO;
 import org.example.dto.GenTableDTO;
 import org.example.dto.GenTableRequest;
 import org.example.exceptions.SchemaConflictException;
-import org.example.messaging.producer.TableEventProducer;
+//import org.example.messaging.producer.TableEventProducer;
 import org.example.model.GenColumn;
 import org.example.model.GenTable;
 import org.example.repository.GenTableRepository;
@@ -22,7 +22,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class GeneratorService {
 
-    private final TableEventProducer tableEventProducer;
+    //private final TableEventProducer tableEventProducer;
 
     private final GeneratorSqlService genSqlService;
     private final GenTableRepository genTableRepository;
@@ -59,11 +59,11 @@ public class GeneratorService {
      * @param request
      * @return
      */
-    private GenTableDTO buildTableDTO(GenTableRequest request) {
+    private GenTableDTO buildTableDTO(GenTableRequest request, Boolean toDelete) {
         GenTableDTO dto = mapper.map(request, GenTableDTO.class);
 
         genTableRepository.findByTableNameIgnoreCase(request.tableName())
-                .ifPresent(existing -> mergeWithExisting(dto, existing));
+                .ifPresent(existing -> mergeWithExisting(dto, existing, toDelete));
 
         return dto;
     }
@@ -73,7 +73,7 @@ public class GeneratorService {
      * @param dto
      * @param existing
      */
-    private void mergeWithExisting(GenTableDTO dto, GenTable existing) {
+    private void mergeWithExisting(GenTableDTO dto, GenTable existing, Boolean toDelete) {
         dto.setNewTable(false);
 
         for (GenColumn current : existing.getGenColumns()) {
@@ -85,10 +85,12 @@ public class GeneratorService {
                 // coluna que já existe no banco e não veio no request
                 GenColumnDTO old = new GenColumnDTO(current);
                 old.setNewField(false);
+                old.setToDelete(false);
                 dto.addColumn(old);
             } else if (Objects.equals(requested.get().getColumnType(), current.getColumnType())) {
                 // coluna que já existe e veio no request
                 requested.get().setNewField(false);
+                requested.get().setToDelete(toDelete);
             } else {
                 // erro se o request enviou uma coluna de tipo diferente da já cadastrada no banco
                 throw new SchemaConflictException(
@@ -102,7 +104,7 @@ public class GeneratorService {
 
     @Transactional(rollbackFor = Exception.class)
     public String generate(GenTableRequest genTableReq, Boolean byAi) throws Exception {
-        GenTableDTO genTableDTO = buildTableDTO(genTableReq);
+        GenTableDTO genTableDTO = buildTableDTO(genTableReq, false);
         Map<String, String> originalFiles = genClassService
                 .getOriginals(genTableReq.tableName(), byAi);
         try {
@@ -123,6 +125,23 @@ public class GeneratorService {
             compile();
         } catch (Exception rollbackError) {
             original.addSuppressed(rollbackError);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public String delete(GenTableRequest genTableReq, Boolean byAi) throws Exception {
+        GenTableDTO genTableDTO = buildTableDTO(genTableReq, true);
+        Map<String, String> originalFiles = genClassService
+                .getOriginals(genTableReq.tableName(), byAi);
+        try {
+            genClassService.deleteClasses(genTableDTO, byAi);
+            genSqlService.deleteOrUpdateTable(genTableDTO, byAi);
+            //tableEventProducer.tableCreated(genTableReq.tableName());
+            compile();
+            return "ok";
+        } catch (Exception e) {
+            restoreFiles(originalFiles, e);
+            return e.getMessage();
         }
     }
 }

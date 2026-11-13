@@ -1,4 +1,4 @@
-package org.example.messaging.consumer;
+/*package org.example.messaging.consumer;
 
 import org.example.service.EmailService;
 import org.springframework.stereotype.Component;
@@ -18,4 +18,4 @@ public class TableCreatedConsumer {
     public void process(String tableName) {
         emailService.sendTableCreatedEmail(tableName);
     }
-}
+}*/

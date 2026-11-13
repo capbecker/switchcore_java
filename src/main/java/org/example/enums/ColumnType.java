@@ -5,7 +5,8 @@ public enum ColumnType {
     INTEGER("Integer", "INTEGER", null),
     BOOLEAN("Boolean", "BOOLEAN", null),
     DATE("LocalDate", "DATE", null),
-    MONEY("BigDecimal", "NUMERIC", "15,2");
+    MONEY("BigDecimal", "NUMERIC", "15,2"),
+    FOREIGN_KEY("Long", "Long", null);
 
     private final String javaType;
     private final String sqlType;

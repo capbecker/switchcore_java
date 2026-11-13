@@ -15,10 +15,12 @@ public class GenTableDTO{
     private String tableName;
     private List<GenColumnDTO> genColumns;
     private Boolean newTable;
+    private Boolean toDelete;
 
     public GenTableDTO() {
         this.genColumns = new ArrayList<>();
         this.newTable = true;
+        this.toDelete = false;
     }
 
     public void addColumn(GenColumnDTO genColumnDTO) {

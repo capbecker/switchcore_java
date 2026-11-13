@@ -1,9 +1,15 @@
 package org.example.service;
 
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.GenColumnDTO;
 import org.example.dto.GenTableDTO;
+import org.example.dto.GenTableRequest;
+import org.example.enums.ColumnType;
+import org.example.model.GenTable;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -11,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -178,13 +185,26 @@ public class GeneratorClassService {
             .add("import org.springframework.http.HttpStatus;")
             .add("import org.springframework.web.server.ResponseStatusException;")
             .add("import java.util.List;")
+            .add("import org.modelmapper.ModelMapper;")
+            .add("import jakarta.annotation.PostConstruct;")
+            .add("import org.modelmapper.Conditions;")
             .add("")
             .add("@Service")
             .add("public class %sService {".formatted(nomeTabela))
             .add("    private final %sRepository repository;".formatted(nomeTabela))
-            .add("    public %sService(%sRepository repository) {".formatted(nomeTabela,nomeTabela))
+            .add("    private final ModelMapper modelMapper;")
+            .add("")
+            .add("    public %sService(%sRepository repository, ModelMapper modelMapper) {".formatted(nomeTabela,nomeTabela))
             .add("        this.repository = repository;")
+            .add("        this.modelMapper = modelMapper;")
             .add("    }")
+            .add("")
+            .add("@PostConstruct")
+            .add("void configurarMapper() {")
+            .add("    modelMapper.typeMap(%s.class, %s.class)".formatted(nomeTabela, nomeTabela))
+            .add("            .setPropertyCondition(Conditions.isNotNull())")
+            .add("            .addMappings(m -> m.skip(%s::setId));".formatted(nomeTabela))
+            .add("}")
             .add("")
             .add("    @Transactional")
             .add("    public %s salvar(%s entidade) {".formatted(nomeTabela,nomeTabela))
@@ -207,7 +227,7 @@ public class GeneratorClassService {
             .add("    @Transactional")
             .add("    public %s atualizar(Long id, %s entidade) {".formatted(nomeTabela,nomeTabela))
             .add("        %s existente = buscarPorId(id);".formatted(nomeTabela))
-            .add("")
+            .add("        modelMapper.map(entidade, existente);")
             .add("        return repository.save(existente);")
             .add("    }")
             .add("    ")
@@ -217,6 +237,7 @@ public class GeneratorClassService {
             .add("        repository.delete(entidade);")
             .add("    }")
             .add("}");
+        System.out.println(textoArquivo);
         Files.createDirectories(arquivo.getParent());
         Files.writeString(arquivo,textoArquivo.toString());
     }
@@ -231,10 +252,21 @@ public class GeneratorClassService {
                 .add("import lombok.AllArgsConstructor;")
                 .add("import lombok.Getter;")
                 .add("import lombok.NoArgsConstructor;")
-                .add("import lombok.Setter;")
-                .add("import java.time.LocalDate;")
-                .add("import java.math.BigDecimal;")
-                .add("@Getter")
+                .add("import lombok.Setter;");
+        Set<String> imports = new HashSet<>();
+        for (GenColumnDTO c : genTableDTO.getGenColumns()) {
+            switch (c.getColumnType()){
+                case ColumnType.DATE -> imports.add("java.time.LocalDate;");
+                case ColumnType.MONEY -> imports.add("java.math.BigDecimal;");
+                case ColumnType.FOREIGN_KEY ->
+                    imports.add("org.example.automatic.model.%s;"
+                        .formatted(toClassName(c.getColumnName())));
+            };
+        }
+        textoArquivo.add(imports.stream().map(imp -> "import " + imp)
+                .collect(Collectors.joining("\n")));
+
+        textoArquivo.add("@Getter")
                 .add("@Setter")
                 .add("@NoArgsConstructor")
                 .add("@AllArgsConstructor")
@@ -244,6 +276,15 @@ public class GeneratorClassService {
                 .add("@GeneratedValue(strategy = GenerationType.IDENTITY)")
                 .add("private Long id;");
         for (GenColumnDTO c : genTableDTO.getGenColumns()) {
+            if (c.getToDelete()) {
+                continue;
+            }
+            if (c.getColumnType().equals(ColumnType.FOREIGN_KEY)) {
+                textoArquivo.add("@ManyToOne");
+                textoArquivo.add("@JoinColumn(name=\"id_%s\", nullable = %s)".formatted(c.getColumnName(), c.getIsNullable()));
+                textoArquivo.add("private %s %s;".formatted(toClassName(c.getColumnName()), c.getColumnName()));
+                continue;
+            }
             List<String> atributos = new ArrayList<>();
             if (c.getColumnNameDatabase() != null)
                 atributos.add("name = \"%s\"".formatted(c.getColumnNameDatabase()));
@@ -253,10 +294,10 @@ public class GeneratorClassService {
                 atributos.add("nullable = false");
             if (!atributos.isEmpty())
                 textoArquivo.add("@Column(" + String.join(", ", atributos) + ")");
-
             textoArquivo.add("private %s %s;".formatted(c.getColumnType().getJavaType(),c.getColumnName()));
         }
         textoArquivo.add("}");
+        System.out.println(textoArquivo);
         Files.createDirectories(arquivo.getParent());
         Files.writeString(arquivo, textoArquivo.toString());
     }
@@ -279,7 +320,6 @@ public class GeneratorClassService {
         Files.writeString(arquivo, textoArquivo.toString());
     }
 
-
     public void generateClasses(GenTableDTO genTableDTO, Boolean byAi) throws IOException {
         String nomeTabela = toClassName(genTableDTO.getTableName());
 
@@ -287,5 +327,44 @@ public class GeneratorClassService {
         generateRepository(nomeTabela,byAi);
         generateService(nomeTabela,byAi);
         generateController(nomeTabela, byAi);
+    }
+
+    /*********************
+    ******* Delete *******
+    **********************/
+    private void deleteEntity(String nomeTabela, Boolean byAi) throws IOException {
+        nomeTabela = toClassName(nomeTabela);
+        Path arquivo = Paths.get(getCaminhoModel(byAi)+nomeTabela+".java");
+        Files.delete(arquivo);
+    }
+
+    private void deleteRepository(String nomeTabela, Boolean byAi) throws IOException {
+        nomeTabela = nomeTabela.substring(0,1).toUpperCase()+nomeTabela.substring(1).toLowerCase();
+        Path arquivo = Paths.get(getCaminhoRepository(byAi)+nomeTabela+"Repository.java");
+        Files.delete(arquivo);
+    }
+
+    private void deleteController(String nomeTabela, Boolean byAi) throws IOException {
+        nomeTabela = nomeTabela.substring(0,1).toUpperCase()+nomeTabela.substring(1).toLowerCase();
+        Path arquivo = Paths.get(getCaminhoController(byAi)+nomeTabela+"Controller.java");
+        Files.delete(arquivo);
+    }
+
+    private void deleteService(String nomeTabela, Boolean byAi) throws IOException {
+        nomeTabela = nomeTabela.substring(0,1).toUpperCase()+nomeTabela.substring(1).toLowerCase();
+        Path arquivo = Paths.get(getCaminhoService(byAi)+nomeTabela+"Service.java");
+        Files.delete(arquivo);
+    }
+
+    public void deleteClasses(GenTableDTO genTableDTO, Boolean byAi)  throws IOException {
+        String nomeTabela = toClassName(genTableDTO.getTableName());
+        if (genTableDTO.getToDelete()) {
+            deleteEntity(nomeTabela,byAi);
+            deleteRepository(nomeTabela,byAi);
+            deleteService(nomeTabela,byAi);
+            deleteController(nomeTabela, byAi);
+        } else {
+            generateEntity(genTableDTO, byAi);
+        }
     }
 }

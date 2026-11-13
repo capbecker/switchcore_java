@@ -1,4 +1,4 @@
-package org.example.messaging.producer;
+/*package org.example.messaging.producer;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
@@ -15,4 +15,4 @@ public class TableEventProducer {
     public void tableCreated(String tableName) {
         rabbitTemplate.convertAndSend("table-created", tableName);
     }
-}
+}*/

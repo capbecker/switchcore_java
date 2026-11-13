@@ -1,4 +1,4 @@
-package org.example.service;
+/*package org.example.service;
 
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -24,4 +24,4 @@ public class EmailService {
 
         mailSender.send(message);
     }
-}
+}*/

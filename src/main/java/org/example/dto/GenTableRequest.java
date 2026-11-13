@@ -13,7 +13,14 @@ public record GenTableRequest(
             message = "tableName deve ter só letras e números e começar com letra")
     String tableName,
 
-    @NotEmpty(message = "informe ao menos uma coluna")
+    //@NotEmpty(message = "informe ao menos uma coluna")
     @Valid
-    List<GenColumnRequest> genColumns
-){}
+    List<GenColumnRequest> genColumns,
+
+    Boolean toDelete
+){
+
+    public GenTableRequest {
+        if (toDelete == null) toDelete = false;
+    }
+}

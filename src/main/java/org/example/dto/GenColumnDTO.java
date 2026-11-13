@@ -18,9 +18,11 @@ public class GenColumnDTO {
     private Boolean isNullable;
     private String sizeColumn;
     private Boolean newField;
+    private Boolean toDelete;
 
     public GenColumnDTO() {
         this.newField=true;
+        this.toDelete=false;
     }
 
     public GenColumnDTO(GenColumn gc) {
@@ -31,5 +33,6 @@ public class GenColumnDTO {
         this.isNullable = gc.getIsNullable();
         this.sizeColumn = gc.getSizeColumn();
         this.newField = true;
+        this.toDelete = false;
     }
 }

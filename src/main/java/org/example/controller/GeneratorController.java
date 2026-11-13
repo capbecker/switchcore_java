@@ -25,4 +25,9 @@ public class GeneratorController {
    public ResponseEntity<String> generate(@RequestBody @Valid GenTableRequest genTableDTO) throws Exception {
        return ResponseEntity.ok(service.generate(genTableDTO, false));
    }
+
+    @PostMapping("/delete")
+    public ResponseEntity<String> delete(@RequestBody @Valid GenTableRequest genTableDTO) throws Exception {
+        return ResponseEntity.ok(service.delete(genTableDTO, false));
+    }
 }
